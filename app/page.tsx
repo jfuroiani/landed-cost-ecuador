@@ -94,12 +94,20 @@ export default function Page() {
             <div className="grid gap-3">
               <label>
                 <div className="mb-1 text-sm">Producto</div>
-                <input className="w-full rounded-lg border p-2" value={producto} onChange={(e) => setProducto(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  value={producto}
+                  onChange={(e) => setProducto(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">Incoterm</div>
-                <select className="w-full rounded-lg border p-2" value={incoterm} onChange={(e) => setIncoterm(e.target.value)}>
+                <select
+                  className="w-full rounded-lg border p-2"
+                  value={incoterm}
+                  onChange={(e) => setIncoterm(e.target.value)}
+                >
                   <option>EXW</option>
                   <option>FOB</option>
                   <option>CIF</option>
@@ -108,57 +116,112 @@ export default function Page() {
 
               <label>
                 <div className="mb-1 text-sm">Unidades</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={unidades} onChange={(e) => setUnidades(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={unidades}
+                  onChange={(e) => setUnidades(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">Costo unitario</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={costoUnitario} onChange={(e) => setCostoUnitario(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={costoUnitario}
+                  onChange={(e) => setCostoUnitario(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">Flete</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={flete} onChange={(e) => setFlete(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={flete}
+                  onChange={(e) => setFlete(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">Seguro</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={seguro} onChange={(e) => setSeguro(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={seguro}
+                  onChange={(e) => setSeguro(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">Gastos en destino</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={gastosDestino} onChange={(e) => setGastosDestino(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={gastosDestino}
+                  onChange={(e) => setGastosDestino(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">Agente de aduana</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={agenteAduana} onChange={(e) => setAgenteAduana(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={agenteAduana}
+                  onChange={(e) => setAgenteAduana(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">Otros costos</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={otros} onChange={(e) => setOtros(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={otros}
+                  onChange={(e) => setOtros(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">Arancel %</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={arancel} onChange={(e) => setArancel(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={arancel}
+                  onChange={(e) => setArancel(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">FODINFA %</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={fodinfa} onChange={(e) => setFodinfa(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={fodinfa}
+                  onChange={(e) => setFodinfa(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">IVA %</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={iva} onChange={(e) => setIva(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={iva}
+                  onChange={(e) => setIva(e.target.value)}
+                />
               </label>
 
               <label>
                 <div className="mb-1 text-sm">ICE %</div>
-                <input className="w-full rounded-lg border p-2" type="number" value={ice} onChange={(e) => setIce(e.target.value)} />
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={ice}
+                  onChange={(e) => setIce(e.target.value)}
+                />
               </label>
             </div>
           </section>
@@ -169,7 +232,9 @@ export default function Page() {
               <div className="rounded-xl bg-black p-4 text-white">
                 <div className="text-sm text-gray-300">Costo landed total</div>
                 <div className="text-3xl font-bold">{money(r.total)}</div>
-                <div className="mt-1 text-sm text-gray-300">Unitario: {money(r.unitario)}</div>
+                <div className="mt-1 text-sm text-gray-300">
+                  Unitario: {money(r.unitario)}
+                </div>
               </div>
 
               <div className="flex justify-between rounded-lg border p-3"><span>Valor mercancía</span><strong>{money(r.mercaderia)}</strong></div>
