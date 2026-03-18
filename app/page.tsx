@@ -1,4 +1,3 @@
-cat > app/page.tsx <<'EOF'
 "use client";
 
 import { useMemo, useState } from "react";
