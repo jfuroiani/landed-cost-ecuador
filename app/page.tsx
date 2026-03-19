@@ -57,6 +57,10 @@ export default function Page() {
   const [arancelesDB, setArancelesDB] = useState<any[]>([]);
   const [hsCode, setHsCode] = useState("");
 
+  const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
+  const [hsValido, setHsValido] = useState(true);
+  const [descripcionHS, setDescripcionHS] = useState("");
+
   useEffect(() => {
   fetch("https://raw.githubusercontent.com/jfuroiani/landed-cost-aranceles-db/main/aranceles.json")
     .then(res => res.json())
@@ -85,6 +89,35 @@ export default function Page() {
     if (item.tipo === "mixto") {
       setAplicaEspecifico(true);
       setPresetEspecifico("monitor_tv");
+    }
+
+  }, [hsCode, arancelesDB]);
+
+  useEffect(() => {
+    if (!hsCode) {
+      setResultadosBusqueda([]);
+      setDescripcionHS("");
+      setHsValido(true);
+      return;
+    }
+
+    const texto = hsCode.toLowerCase();
+
+    const resultados = arancelesDB.filter(item =>
+      item.hs.includes(texto) ||
+      item.descripcion.toLowerCase().includes(texto)
+    );
+
+    setResultadosBusqueda(resultados.slice(0, 5));
+
+    const exacto = arancelesDB.find(x => x.hs === hsCode);
+
+    if (exacto) {
+      setHsValido(true);
+      setDescripcionHS(exacto.descripcion);
+    } else {
+      setHsValido(false);
+      setDescripcionHS("");
     }
 
   }, [hsCode, arancelesDB]);
@@ -314,12 +347,53 @@ export default function Page() {
 
               <label>
                <div className="mb-1 text-sm">Partida arancelaria</div>
-               <input
-                 className="w-full rounded-lg border p-2"
-                 placeholder="Ej: 8528720000"
-                 value={hsCode}
-                 onChange={(e) => setHsCode(e.target.value)}
-               />
+               <div className="relative">
+                <input
+                  className={`w-full rounded-lg border p-2 ${
+                    hsValido ? "" : "border-red-500"
+                  }`}
+                  placeholder="Buscar por código o producto (ej: TV, camiseta...)"
+                  value={hsCode}
+                  onChange={(e) => setHsCode(e.target.value)}
+                />
+
+                {/* Dropdown */}
+                {resultadosBusqueda.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow">
+                    {resultadosBusqueda.map((item, i) => (
+                      <div
+                        key={i}
+                        className="cursor-pointer p-2 hover:bg-gray-100"
+                        onClick={() => {
+                          setHsCode(item.hs);
+                          setDescripcionHS(item.descripcion);
+                          setResultadosBusqueda([]);
+                          setHsValido(true);
+                        }}
+                      >
+                        <div className="font-medium">{item.hs}</div>
+                        <div className="text-xs text-gray-500">
+                          {item.descripcion}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Descripción */}
+              {descripcionHS && (
+                <div className="mt-2 text-sm text-green-700">
+                  {descripcionHS}
+                </div>
+              )}
+
+              {/* Error */}
+              {!hsValido && hsCode && (
+                <div className="mt-2 text-sm text-red-500">
+                  Partida no válida
+                </div>
+              )}
               </label>
 
               <label>
