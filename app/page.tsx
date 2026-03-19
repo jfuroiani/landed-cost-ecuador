@@ -29,6 +29,11 @@ export default function Page() {
   const [iva, setIva] = useState("15");
   const [ice, setIce] = useState("0");
 
+  const [aplicaIsd, setAplicaIsd] = useState(true);
+  const [tasaIsd, setTasaIsd] = useState("5");
+  const [baseIsdModo, setBaseIsdModo] = useState("mercaderia");
+  const [baseIsdManual, setBaseIsdManual] = useState("0");
+
   const r = useMemo(() => {
     const qty = num(unidades);
     const mercaderia = qty * num(costoUnitario);
@@ -49,8 +54,18 @@ export default function Page() {
     const baseIva = base + vArancel + vFodinfa + vIce;
     const vIva = baseIva * (num(iva) / 100);
 
+    let baseIsd = 0;
+    if (baseIsdModo === "mercaderia") baseIsd = mercaderia;
+    if (baseIsdModo === "mercaderia_flete") baseIsd = mercaderia + num(flete);
+    if (baseIsdModo === "mercaderia_flete_seguro") {
+      baseIsd = mercaderia + num(flete) + num(seguro);
+    }
+    if (baseIsdModo === "manual") baseIsd = num(baseIsdManual);
+
+    const vIsd = aplicaIsd ? baseIsd * (num(tasaIsd) / 100) : 0;
+
     const extras = num(gastosDestino) + num(agenteAduana) + num(otros);
-    const total = cif + vArancel + vFodinfa + vIce + vIva + extras;
+    const total = cif + vArancel + vFodinfa + vIce + vIva + extras + vIsd;
     const unitario = qty > 0 ? total / qty : 0;
 
     return {
@@ -61,6 +76,8 @@ export default function Page() {
       vFodinfa,
       vIce,
       vIva,
+      vIsd,
+      baseIsd,
       extras,
       total,
       unitario,
@@ -78,11 +95,15 @@ export default function Page() {
     fodinfa,
     iva,
     ice,
+    aplicaIsd,
+    tasaIsd,
+    baseIsdModo,
+    baseIsdManual,
   ]);
 
   return (
     <main className="min-h-screen bg-gray-50 p-4 text-gray-900">
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
         <h1 className="text-3xl font-bold">Calculadora Landed Cost Ecuador</h1>
         <p className="text-sm text-gray-600">
           Estimación rápida para importaciones desde la Feria de Cantón.
@@ -227,16 +248,77 @@ export default function Page() {
           </section>
 
           <section className="rounded-2xl bg-white p-4 shadow">
-            <h2 className="mb-4 text-xl font-semibold">Resultado</h2>
-            <div className="space-y-3">
-              <div className="rounded-xl bg-black p-4 text-white">
-                <div className="text-sm text-gray-300">Costo landed total</div>
-                <div className="text-3xl font-bold">{money(r.total)}</div>
-                <div className="mt-1 text-sm text-gray-300">
-                  Unitario: {money(r.unitario)}
+            <h2 className="mb-4 text-xl font-semibold">ISD</h2>
+            <div className="grid gap-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={aplicaIsd}
+                  onChange={(e) => setAplicaIsd(e.target.checked)}
+                />
+                <span className="text-sm">Aplicar ISD</span>
+              </label>
+
+              <label>
+                <div className="mb-1 text-sm">Tasa ISD %</div>
+                <input
+                  className="w-full rounded-lg border p-2"
+                  type="number"
+                  value={tasaIsd}
+                  onChange={(e) => setTasaIsd(e.target.value)}
+                />
+              </label>
+
+              <label>
+                <div className="mb-1 text-sm">Base ISD</div>
+                <select
+                  className="w-full rounded-lg border p-2"
+                  value={baseIsdModo}
+                  onChange={(e) => setBaseIsdModo(e.target.value)}
+                >
+                  <option value="mercaderia">Solo mercadería</option>
+                  <option value="mercaderia_flete">Mercadería + flete</option>
+                  <option value="mercaderia_flete_seguro">
+                    Mercadería + flete + seguro
+                  </option>
+                  <option value="manual">Manual</option>
+                </select>
+              </label>
+
+              {baseIsdModo === "manual" && (
+                <label>
+                  <div className="mb-1 text-sm">Base ISD manual</div>
+                  <input
+                    className="w-full rounded-lg border p-2"
+                    type="number"
+                    value={baseIsdManual}
+                    onChange={(e) => setBaseIsdManual(e.target.value)}
+                  />
+                </label>
+              )}
+
+              <div className="rounded-xl border bg-gray-50 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Base ISD calculada</span>
+                  <strong>{money(r.baseIsd)}</strong>
                 </div>
               </div>
+            </div>
+          </section>
+        </div>
 
+        <section className="rounded-2xl bg-white p-4 shadow">
+          <h2 className="mb-4 text-xl font-semibold">Resultado</h2>
+          <div className="space-y-3">
+            <div className="rounded-xl bg-black p-4 text-white">
+              <div className="text-sm text-gray-300">Costo landed total</div>
+              <div className="text-3xl font-bold">{money(r.total)}</div>
+              <div className="mt-1 text-sm text-gray-300">
+                Unitario: {money(r.unitario)}
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
               <div className="flex justify-between rounded-lg border p-3"><span>Valor mercancía</span><strong>{money(r.mercaderia)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>FOB</span><strong>{money(r.fob)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>CIF</span><strong>{money(r.cif)}</strong></div>
@@ -244,10 +326,11 @@ export default function Page() {
               <div className="flex justify-between rounded-lg border p-3"><span>FODINFA</span><strong>{money(r.vFodinfa)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>ICE</span><strong>{money(r.vIce)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>IVA</span><strong>{money(r.vIva)}</strong></div>
-              <div className="flex justify-between rounded-lg border p-3"><span>Extras</span><strong>{money(r.extras)}</strong></div>
+              <div className="flex justify-between rounded-lg border p-3"><span>ISD</span><strong>{money(r.vIsd)}</strong></div>
+              <div className="flex justify-between rounded-lg border p-3 md:col-span-2"><span>Extras</span><strong>{money(r.extras)}</strong></div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </main>
   );
