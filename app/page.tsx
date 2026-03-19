@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 const money = (n: number) =>
   new Intl.NumberFormat("es-EC", {
@@ -53,6 +53,41 @@ export default function Page() {
   const [tasaEspecificoUsd, setTasaEspecificoUsd] = useState("0");
   const [cantidadEspecifico, setCantidadEspecifico] = useState("0");
   const [pulgadas, setPulgadas] = useState("24");
+
+  const [arancelesDB, setArancelesDB] = useState<any[]>([]);
+  const [hsCode, setHsCode] = useState("");
+
+  useEffect(() => {
+  fetch("https://raw.githubusercontent.com/jfuroiani/landed-cost-aranceles-db/main/aranceles.json")
+    .then(res => res.json())
+    .then(data => setArancelesDB(data))
+    .catch(err => console.error("Error cargando aranceles:", err));
+  }, []);
+
+  useEffect(() => {
+    if (!hsCode) return;
+
+    const item = arancelesDB.find(x => x.hs === hsCode);
+
+    if (!item) return;
+
+    setArancel(item.advalorem?.toString() || "0");
+    setFodinfa(item.fodinfa?.toString() || "0.5");
+    setIva(item.iva?.toString() || "15");
+    setIce(item.ice?.toString() || "0");
+
+    if (item.tipo === "especifico") {
+      setAplicaEspecifico(true);
+      setUnidadEspecifico(item.especifico.unidad);
+      setTasaEspecificoUsd(item.especifico.usd.toString());
+    }
+
+    if (item.tipo === "mixto") {
+      setAplicaEspecifico(true);
+      setPresetEspecifico("monitor_tv");
+    }
+
+  }, [hsCode, arancelesDB]);
 
   const mostrarGastosOrigen = incoterm === "EXW";
   const mostrarFlete =
@@ -275,6 +310,16 @@ export default function Page() {
                   value={producto}
                   onChange={(e) => setProducto(e.target.value)}
                 />
+              </label>
+
+              <label>
+               <div className="mb-1 text-sm">Partida arancelaria</div>
+               <input
+                 className="w-full rounded-lg border p-2"
+                 placeholder="Ej: 8528720000"
+                 value={hsCode}
+                 onChange={(e) => setHsCode(e.target.value)}
+               />
               </label>
 
               <label>
