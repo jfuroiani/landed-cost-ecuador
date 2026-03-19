@@ -20,9 +20,11 @@ type PresetEspecifico =
   | "ropa_courier"
   | "calzado_courier";
 
+type Incoterm = "EXW" | "FCA" | "FOB" | "CFR" | "CIF" | "DAP" | "DPU";
+
 export default function Page() {
   const [producto, setProducto] = useState("Laptop 14 pulgadas");
-  const [incoterm, setIncoterm] = useState("FOB");
+  const [incoterm, setIncoterm] = useState<Incoterm>("FOB");
   const [unidades, setUnidades] = useState("100");
   const [costoUnitario, setCostoUnitario] = useState("250");
 
@@ -53,37 +55,83 @@ export default function Page() {
   const [pulgadas, setPulgadas] = useState("24");
 
   const mostrarGastosOrigen = incoterm === "EXW";
-  const mostrarFlete = incoterm === "EXW" || incoterm === "FOB";
-  const mostrarSeguro = incoterm === "EXW" || incoterm === "FOB";
+  const mostrarFlete =
+    incoterm === "EXW" || incoterm === "FCA" || incoterm === "FOB";
+  const mostrarSeguro =
+    incoterm === "EXW" ||
+    incoterm === "FCA" ||
+    incoterm === "FOB" ||
+    incoterm === "CFR";
+
+  const etiquetaCostoUnitario = (() => {
+    if (incoterm === "EXW") return "Costo unitario EXW";
+    if (incoterm === "FCA") return "Costo unitario FCA";
+    if (incoterm === "FOB") return "Costo unitario FOB";
+    if (incoterm === "CFR") return "Costo unitario CFR";
+    if (incoterm === "CIF") return "Costo unitario CIF";
+    if (incoterm === "DAP") return "Costo unitario DAP";
+    return "Costo unitario DPU";
+  })();
 
   const r = useMemo(() => {
     const qty = num(unidades);
-    const mercaderia = qty * num(costoUnitario);
+    const mercaderiaBase = qty * num(costoUnitario);
 
     let gastosOrigenCalc = 0;
     let fleteCalc = 0;
     let seguroCalc = 0;
     let fob = 0;
     let cif = 0;
+    let mercaderia = mercaderiaBase;
 
     if (incoterm === "EXW") {
       gastosOrigenCalc = num(gastosOrigen);
       fleteCalc = num(flete);
       seguroCalc = num(seguro);
-      fob = mercaderia + gastosOrigenCalc;
+      fob = mercaderiaBase + gastosOrigenCalc;
       cif = fob + fleteCalc + seguroCalc;
+      mercaderia = mercaderiaBase;
+    }
+
+    if (incoterm === "FCA") {
+      fleteCalc = num(flete);
+      seguroCalc = num(seguro);
+      fob = mercaderiaBase;
+      cif = fob + fleteCalc + seguroCalc;
+      mercaderia = mercaderiaBase;
     }
 
     if (incoterm === "FOB") {
       fleteCalc = num(flete);
       seguroCalc = num(seguro);
-      fob = mercaderia;
+      fob = mercaderiaBase;
       cif = fob + fleteCalc + seguroCalc;
+      mercaderia = mercaderiaBase;
+    }
+
+    if (incoterm === "CFR") {
+      seguroCalc = num(seguro);
+      fob = mercaderiaBase - num(flete);
+      cif = mercaderiaBase + seguroCalc;
+      mercaderia = mercaderiaBase;
     }
 
     if (incoterm === "CIF") {
-      fob = mercaderia;
-      cif = mercaderia;
+      fob = mercaderiaBase;
+      cif = mercaderiaBase;
+      mercaderia = mercaderiaBase;
+    }
+
+    if (incoterm === "DAP") {
+      fob = mercaderiaBase;
+      cif = mercaderiaBase;
+      mercaderia = mercaderiaBase;
+    }
+
+    if (incoterm === "DPU") {
+      fob = mercaderiaBase;
+      cif = mercaderiaBase;
+      mercaderia = mercaderiaBase;
     }
 
     let arancelAdvaloremAjustado = num(arancel);
@@ -234,11 +282,15 @@ export default function Page() {
                 <select
                   className="w-full rounded-lg border p-2"
                   value={incoterm}
-                  onChange={(e) => setIncoterm(e.target.value)}
+                  onChange={(e) => setIncoterm(e.target.value as Incoterm)}
                 >
-                  <option>EXW</option>
-                  <option>FOB</option>
-                  <option>CIF</option>
+                  <option value="EXW">EXW</option>
+                  <option value="FCA">FCA</option>
+                  <option value="FOB">FOB</option>
+                  <option value="CFR">CFR</option>
+                  <option value="CIF">CIF</option>
+                  <option value="DAP">DAP</option>
+                  <option value="DPU">DPU</option>
                 </select>
               </label>
 
@@ -253,13 +305,7 @@ export default function Page() {
               </label>
 
               <label>
-                <div className="mb-1 text-sm">
-                  {incoterm === "CIF"
-                    ? "Costo unitario CIF"
-                    : incoterm === "FOB"
-                    ? "Costo unitario FOB"
-                    : "Costo unitario EXW"}
-                </div>
+                <div className="mb-1 text-sm">{etiquetaCostoUnitario}</div>
                 <input
                   className="w-full rounded-lg border p-2"
                   type="number"
@@ -603,10 +649,10 @@ export default function Page() {
               {incoterm === "EXW" && (
                 <div className="flex justify-between rounded-lg border p-3"><span>Gastos en origen</span><strong>{money(r.gastosOrigenCalc)}</strong></div>
               )}
-              {(incoterm === "EXW" || incoterm === "FOB") && (
+              {(incoterm === "EXW" || incoterm === "FCA" || incoterm === "FOB") && (
                 <div className="flex justify-between rounded-lg border p-3"><span>Flete internacional</span><strong>{money(r.fleteCalc)}</strong></div>
               )}
-              {(incoterm === "EXW" || incoterm === "FOB") && (
+              {(incoterm === "EXW" || incoterm === "FCA" || incoterm === "FOB" || incoterm === "CFR") && (
                 <div className="flex justify-between rounded-lg border p-3"><span>Seguro internacional</span><strong>{money(r.seguroCalc)}</strong></div>
               )}
               <div className="flex justify-between rounded-lg border p-3"><span>FOB</span><strong>{money(r.fob)}</strong></div>
