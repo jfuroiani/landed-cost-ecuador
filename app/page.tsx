@@ -25,11 +25,15 @@ export default function Page() {
   const [incoterm, setIncoterm] = useState("FOB");
   const [unidades, setUnidades] = useState("100");
   const [costoUnitario, setCostoUnitario] = useState("250");
+
+  const [gastosOrigen, setGastosOrigen] = useState("0");
   const [flete, setFlete] = useState("1200");
   const [seguro, setSeguro] = useState("120");
+
   const [gastosDestino, setGastosDestino] = useState("350");
   const [agenteAduana, setAgenteAduana] = useState("250");
   const [otros, setOtros] = useState("0");
+
   const [arancel, setArancel] = useState("10");
   const [fodinfa, setFodinfa] = useState("0.5");
   const [iva, setIva] = useState("15");
@@ -48,35 +52,41 @@ export default function Page() {
   const [cantidadEspecifico, setCantidadEspecifico] = useState("0");
   const [pulgadas, setPulgadas] = useState("24");
 
+  const mostrarGastosOrigen = incoterm === "EXW";
+  const mostrarFlete = incoterm === "EXW" || incoterm === "FOB";
+  const mostrarSeguro = incoterm === "EXW" || incoterm === "FOB";
+
   const r = useMemo(() => {
     const qty = num(unidades);
     const mercaderia = qty * num(costoUnitario);
-    let fob = mercaderia;
-    let cif = mercaderia;
 
-    if (incoterm === "FOB") cif = fob + num(flete) + num(seguro);
-    if (incoterm === "CIF") cif = mercaderia;
+    let gastosOrigenCalc = 0;
+    let fleteCalc = 0;
+    let seguroCalc = 0;
+    let fob = 0;
+    let cif = 0;
+
     if (incoterm === "EXW") {
+      gastosOrigenCalc = num(gastosOrigen);
+      fleteCalc = num(flete);
+      seguroCalc = num(seguro);
+      fob = mercaderia + gastosOrigenCalc;
+      cif = fob + fleteCalc + seguroCalc;
+    }
+
+    if (incoterm === "FOB") {
+      fleteCalc = num(flete);
+      seguroCalc = num(seguro);
       fob = mercaderia;
-      cif = fob + num(flete) + num(seguro);
+      cif = fob + fleteCalc + seguroCalc;
     }
 
-    const base = cif;
-    const vArancel = base * (num(arancel) / 100);
-    const vFodinfa = base * (num(fodinfa) / 100);
-    const vIce = base * (num(ice) / 100);
-    const baseIva = base + vArancel + vFodinfa + vIce;
-    const vIva = baseIva * (num(iva) / 100);
-
-    let baseIsd = 0;
-    if (baseIsdModo === "mercaderia") baseIsd = mercaderia;
-    if (baseIsdModo === "mercaderia_flete") baseIsd = mercaderia + num(flete);
-    if (baseIsdModo === "mercaderia_flete_seguro") {
-      baseIsd = mercaderia + num(flete) + num(seguro);
+    if (incoterm === "CIF") {
+      fob = mercaderia;
+      cif = mercaderia;
     }
-    if (baseIsdModo === "manual") baseIsd = num(baseIsdManual);
 
-    const vIsd = aplicaIsd ? baseIsd * (num(tasaIsd) / 100) : 0;
+    let arancelAdvaloremAjustado = num(arancel);
 
     let unidadEspecificoCalc = unidadEspecifico;
     let tasaEspecificoCalc = num(tasaEspecificoUsd);
@@ -90,61 +100,84 @@ export default function Page() {
       const inches = num(pulgadas);
       if (inches <= 20) {
         tasaEspecificoCalc = 0;
-        notaEspecifico = "Hasta 20 pulgadas: sin específico; normalmente queda solo ad-valorem.";
+        arancelAdvaloremAjustado = 5;
+        notaEspecifico = "Hasta 20 pulgadas: 5% ad-valorem y sin específico.";
       } else if (inches <= 32) {
         tasaEspecificoCalc = 73.11;
-        notaEspecifico = "Mayor a 20 y hasta 32 pulgadas: USD 73,11 c/u.";
+        arancelAdvaloremAjustado = 5;
+        notaEspecifico = "Mayor a 20 y hasta 32 pulgadas: 5% + USD 73,11 c/u.";
       } else if (inches <= 41) {
         tasaEspecificoCalc = 140.32;
-        notaEspecifico = "Mayor a 32 y hasta 41 pulgadas: USD 140,32 c/u.";
+        arancelAdvaloremAjustado = 5;
+        notaEspecifico = "Mayor a 32 y hasta 41 pulgadas: 5% + USD 140,32 c/u.";
       } else if (inches <= 75) {
         tasaEspecificoCalc = 158.14;
-        notaEspecifico = "Mayor a 41 y hasta 75 pulgadas: USD 158,14 c/u.";
+        arancelAdvaloremAjustado = 5;
+        notaEspecifico = "Mayor a 41 y hasta 75 pulgadas: 5% + USD 158,14 c/u.";
       } else {
         tasaEspecificoCalc = 0;
-        notaEspecifico =
-          "Mayor a 75 pulgadas: en este preset el específico va en 0; ajusta el ad-valorem manualmente según la subpartida aplicable.";
+        arancelAdvaloremAjustado = 20;
+        notaEspecifico = "Mayor a 75 pulgadas: 20% ad-valorem y sin específico.";
       }
     }
 
     if (presetEspecifico === "ropa_courier") {
       unidadEspecificoCalc = "kg";
       tasaEspecificoCalc = 5.5;
-      notaEspecifico =
-        "Preset courier categoría E: USD 5,50 por kg de ropa/textiles confeccionados.";
+      notaEspecifico = "Preset courier: USD 5,50 por kg.";
     }
 
     if (presetEspecifico === "calzado_courier") {
       unidadEspecificoCalc = "par";
       tasaEspecificoCalc = 6;
-      notaEspecifico =
-        "Preset courier categoría E: USD 6,00 por par de calzado.";
+      notaEspecifico = "Preset courier: USD 6,00 por par.";
     }
 
     const vEspecifico = aplicaEspecifico
       ? tasaEspecificoCalc * cantidadEspecificoCalc
       : 0;
 
+    const base = cif;
+    const vArancel = base * (arancelAdvaloremAjustado / 100);
+    const vFodinfa = base * (num(fodinfa) / 100);
+    const vIce = base * (num(ice) / 100);
+    const baseIva = base + vArancel + vFodinfa + vIce;
+    const vIva = baseIva * (num(iva) / 100);
+
+    let baseIsd = 0;
+    if (baseIsdModo === "mercaderia") baseIsd = mercaderia;
+    if (baseIsdModo === "mercaderia_flete") baseIsd = mercaderia + fleteCalc;
+    if (baseIsdModo === "mercaderia_flete_seguro") {
+      baseIsd = mercaderia + fleteCalc + seguroCalc;
+    }
+    if (baseIsdModo === "manual") baseIsd = num(baseIsdManual);
+
+    const vIsd = aplicaIsd ? baseIsd * (num(tasaIsd) / 100) : 0;
+
     const extras = num(gastosDestino) + num(agenteAduana) + num(otros);
     const total =
-      cif + vArancel + vFodinfa + vIce + vIva + extras + vIsd + vEspecifico;
+      cif + vArancel + vEspecifico + vFodinfa + vIce + vIva + vIsd + extras;
     const unitario = qty > 0 ? total / qty : 0;
 
     return {
       mercaderia,
+      gastosOrigenCalc,
+      fleteCalc,
+      seguroCalc,
       fob,
       cif,
+      arancelAdvaloremAjustado,
       vArancel,
-      vFodinfa,
-      vIce,
-      vIva,
-      vIsd,
-      baseIsd,
       vEspecifico,
       unidadEspecificoCalc,
       tasaEspecificoCalc,
       cantidadEspecificoCalc,
       notaEspecifico,
+      vFodinfa,
+      vIce,
+      vIva,
+      baseIsd,
+      vIsd,
       extras,
       total,
       unitario,
@@ -153,6 +186,7 @@ export default function Page() {
     incoterm,
     unidades,
     costoUnitario,
+    gastosOrigen,
     flete,
     seguro,
     gastosDestino,
@@ -179,7 +213,7 @@ export default function Page() {
       <div className="mx-auto max-w-6xl space-y-6">
         <h1 className="text-3xl font-bold">Calculadora Landed Cost Ecuador</h1>
         <p className="text-sm text-gray-600">
-          Estimación rápida para importaciones. Incluye ISD y arancel específico configurable.
+          Lógica por Incoterm, ISD configurable y arancel específico.
         </p>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -219,7 +253,13 @@ export default function Page() {
               </label>
 
               <label>
-                <div className="mb-1 text-sm">Costo unitario</div>
+                <div className="mb-1 text-sm">
+                  {incoterm === "CIF"
+                    ? "Costo unitario CIF"
+                    : incoterm === "FOB"
+                    ? "Costo unitario FOB"
+                    : "Costo unitario EXW"}
+                </div>
                 <input
                   className="w-full rounded-lg border p-2"
                   type="number"
@@ -228,25 +268,41 @@ export default function Page() {
                 />
               </label>
 
-              <label>
-                <div className="mb-1 text-sm">Flete</div>
-                <input
-                  className="w-full rounded-lg border p-2"
-                  type="number"
-                  value={flete}
-                  onChange={(e) => setFlete(e.target.value)}
-                />
-              </label>
+              {mostrarGastosOrigen && (
+                <label>
+                  <div className="mb-1 text-sm">Gastos en origen</div>
+                  <input
+                    className="w-full rounded-lg border p-2"
+                    type="number"
+                    value={gastosOrigen}
+                    onChange={(e) => setGastosOrigen(e.target.value)}
+                  />
+                </label>
+              )}
 
-              <label>
-                <div className="mb-1 text-sm">Seguro</div>
-                <input
-                  className="w-full rounded-lg border p-2"
-                  type="number"
-                  value={seguro}
-                  onChange={(e) => setSeguro(e.target.value)}
-                />
-              </label>
+              {mostrarFlete && (
+                <label>
+                  <div className="mb-1 text-sm">Flete internacional</div>
+                  <input
+                    className="w-full rounded-lg border p-2"
+                    type="number"
+                    value={flete}
+                    onChange={(e) => setFlete(e.target.value)}
+                  />
+                </label>
+              )}
+
+              {mostrarSeguro && (
+                <label>
+                  <div className="mb-1 text-sm">Seguro internacional</div>
+                  <input
+                    className="w-full rounded-lg border p-2"
+                    type="number"
+                    value={seguro}
+                    onChange={(e) => setSeguro(e.target.value)}
+                  />
+                </label>
+              )}
 
               <label>
                 <div className="mb-1 text-sm">Gastos en destino</div>
@@ -544,8 +600,18 @@ export default function Page() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="flex justify-between rounded-lg border p-3"><span>Valor mercancía</span><strong>{money(r.mercaderia)}</strong></div>
+              {incoterm === "EXW" && (
+                <div className="flex justify-between rounded-lg border p-3"><span>Gastos en origen</span><strong>{money(r.gastosOrigenCalc)}</strong></div>
+              )}
+              {(incoterm === "EXW" || incoterm === "FOB") && (
+                <div className="flex justify-between rounded-lg border p-3"><span>Flete internacional</span><strong>{money(r.fleteCalc)}</strong></div>
+              )}
+              {(incoterm === "EXW" || incoterm === "FOB") && (
+                <div className="flex justify-between rounded-lg border p-3"><span>Seguro internacional</span><strong>{money(r.seguroCalc)}</strong></div>
+              )}
               <div className="flex justify-between rounded-lg border p-3"><span>FOB</span><strong>{money(r.fob)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>CIF</span><strong>{money(r.cif)}</strong></div>
+              <div className="flex justify-between rounded-lg border p-3"><span>Arancel ad-valorem aplicado</span><strong>{r.arancelAdvaloremAjustado}%</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>Arancel ad-valorem</span><strong>{money(r.vArancel)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>Arancel específico</span><strong>{money(r.vEspecifico)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>FODINFA</span><strong>{money(r.vFodinfa)}</strong></div>
