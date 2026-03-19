@@ -14,6 +14,12 @@ const num = (v: string) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+type PresetEspecifico =
+  | "manual"
+  | "monitor_tv"
+  | "ropa_courier"
+  | "calzado_courier";
+
 export default function Page() {
   const [producto, setProducto] = useState("Laptop 14 pulgadas");
   const [incoterm, setIncoterm] = useState("FOB");
@@ -33,6 +39,14 @@ export default function Page() {
   const [tasaIsd, setTasaIsd] = useState("5");
   const [baseIsdModo, setBaseIsdModo] = useState("mercaderia");
   const [baseIsdManual, setBaseIsdManual] = useState("0");
+
+  const [aplicaEspecifico, setAplicaEspecifico] = useState(false);
+  const [presetEspecifico, setPresetEspecifico] =
+    useState<PresetEspecifico>("manual");
+  const [unidadEspecifico, setUnidadEspecifico] = useState("u");
+  const [tasaEspecificoUsd, setTasaEspecificoUsd] = useState("0");
+  const [cantidadEspecifico, setCantidadEspecifico] = useState("0");
+  const [pulgadas, setPulgadas] = useState("24");
 
   const r = useMemo(() => {
     const qty = num(unidades);
@@ -64,8 +78,56 @@ export default function Page() {
 
     const vIsd = aplicaIsd ? baseIsd * (num(tasaIsd) / 100) : 0;
 
+    let unidadEspecificoCalc = unidadEspecifico;
+    let tasaEspecificoCalc = num(tasaEspecificoUsd);
+    let cantidadEspecificoCalc = num(cantidadEspecifico);
+    let notaEspecifico = "";
+
+    if (presetEspecifico === "monitor_tv") {
+      unidadEspecificoCalc = "u";
+      cantidadEspecificoCalc = qty;
+
+      const inches = num(pulgadas);
+      if (inches <= 20) {
+        tasaEspecificoCalc = 0;
+        notaEspecifico = "Hasta 20 pulgadas: sin específico; normalmente queda solo ad-valorem.";
+      } else if (inches <= 32) {
+        tasaEspecificoCalc = 73.11;
+        notaEspecifico = "Mayor a 20 y hasta 32 pulgadas: USD 73,11 c/u.";
+      } else if (inches <= 41) {
+        tasaEspecificoCalc = 140.32;
+        notaEspecifico = "Mayor a 32 y hasta 41 pulgadas: USD 140,32 c/u.";
+      } else if (inches <= 75) {
+        tasaEspecificoCalc = 158.14;
+        notaEspecifico = "Mayor a 41 y hasta 75 pulgadas: USD 158,14 c/u.";
+      } else {
+        tasaEspecificoCalc = 0;
+        notaEspecifico =
+          "Mayor a 75 pulgadas: en este preset el específico va en 0; ajusta el ad-valorem manualmente según la subpartida aplicable.";
+      }
+    }
+
+    if (presetEspecifico === "ropa_courier") {
+      unidadEspecificoCalc = "kg";
+      tasaEspecificoCalc = 5.5;
+      notaEspecifico =
+        "Preset courier categoría E: USD 5,50 por kg de ropa/textiles confeccionados.";
+    }
+
+    if (presetEspecifico === "calzado_courier") {
+      unidadEspecificoCalc = "par";
+      tasaEspecificoCalc = 6;
+      notaEspecifico =
+        "Preset courier categoría E: USD 6,00 por par de calzado.";
+    }
+
+    const vEspecifico = aplicaEspecifico
+      ? tasaEspecificoCalc * cantidadEspecificoCalc
+      : 0;
+
     const extras = num(gastosDestino) + num(agenteAduana) + num(otros);
-    const total = cif + vArancel + vFodinfa + vIce + vIva + extras + vIsd;
+    const total =
+      cif + vArancel + vFodinfa + vIce + vIva + extras + vIsd + vEspecifico;
     const unitario = qty > 0 ? total / qty : 0;
 
     return {
@@ -78,6 +140,11 @@ export default function Page() {
       vIva,
       vIsd,
       baseIsd,
+      vEspecifico,
+      unidadEspecificoCalc,
+      tasaEspecificoCalc,
+      cantidadEspecificoCalc,
+      notaEspecifico,
       extras,
       total,
       unitario,
@@ -99,14 +166,20 @@ export default function Page() {
     tasaIsd,
     baseIsdModo,
     baseIsdManual,
+    aplicaEspecifico,
+    presetEspecifico,
+    unidadEspecifico,
+    tasaEspecificoUsd,
+    cantidadEspecifico,
+    pulgadas,
   ]);
 
   return (
     <main className="min-h-screen bg-gray-50 p-4 text-gray-900">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-6">
         <h1 className="text-3xl font-bold">Calculadora Landed Cost Ecuador</h1>
         <p className="text-sm text-gray-600">
-          Estimación rápida para importaciones desde la Feria de Cantón.
+          Estimación rápida para importaciones. Incluye ISD y arancel específico configurable.
         </p>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -206,7 +279,7 @@ export default function Page() {
               </label>
 
               <label>
-                <div className="mb-1 text-sm">Arancel %</div>
+                <div className="mb-1 text-sm">Arancel ad-valorem %</div>
                 <input
                   className="w-full rounded-lg border p-2"
                   type="number"
@@ -308,6 +381,157 @@ export default function Page() {
         </div>
 
         <section className="rounded-2xl bg-white p-4 shadow">
+          <h2 className="mb-4 text-xl font-semibold">Arancel específico</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={aplicaEspecifico}
+                  onChange={(e) => setAplicaEspecifico(e.target.checked)}
+                />
+                <span className="text-sm">Aplicar arancel específico</span>
+              </label>
+
+              <label>
+                <div className="mb-1 text-sm">Preset</div>
+                <select
+                  className="w-full rounded-lg border p-2"
+                  value={presetEspecifico}
+                  onChange={(e) =>
+                    setPresetEspecifico(e.target.value as PresetEspecifico)
+                  }
+                >
+                  <option value="manual">Manual</option>
+                  <option value="monitor_tv">Monitor / TV por pulgadas</option>
+                  <option value="ropa_courier">Ropa / textiles courier por kg</option>
+                  <option value="calzado_courier">Calzado courier por par</option>
+                </select>
+              </label>
+
+              {presetEspecifico === "manual" && (
+                <>
+                  <label>
+                    <div className="mb-1 text-sm">Unidad física</div>
+                    <select
+                      className="w-full rounded-lg border p-2"
+                      value={unidadEspecifico}
+                      onChange={(e) => setUnidadEspecifico(e.target.value)}
+                    >
+                      <option value="u">Unidad</option>
+                      <option value="kg">Kilogramo</option>
+                      <option value="par">Par</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <div className="mb-1 text-sm">Tasa específica USD por UF</div>
+                    <input
+                      className="w-full rounded-lg border p-2"
+                      type="number"
+                      value={tasaEspecificoUsd}
+                      onChange={(e) => setTasaEspecificoUsd(e.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    <div className="mb-1 text-sm">Cantidad UF</div>
+                    <input
+                      className="w-full rounded-lg border p-2"
+                      type="number"
+                      value={cantidadEspecifico}
+                      onChange={(e) => setCantidadEspecifico(e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
+
+              {presetEspecifico === "monitor_tv" && (
+                <>
+                  <label>
+                    <div className="mb-1 text-sm">Pulgadas</div>
+                    <input
+                      className="w-full rounded-lg border p-2"
+                      type="number"
+                      value={pulgadas}
+                      onChange={(e) => setPulgadas(e.target.value)}
+                    />
+                  </label>
+                  <div className="rounded-xl border bg-gray-50 p-3 text-sm">
+                    <div className="flex justify-between">
+                      <span>Cantidad base</span>
+                      <strong>{r.cantidadEspecificoCalc} u</strong>
+                    </div>
+                    <div className="mt-2 flex justify-between">
+                      <span>Tasa calculada</span>
+                      <strong>{money(r.tasaEspecificoCalc)} c/u</strong>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {presetEspecifico === "ropa_courier" && (
+                <label>
+                  <div className="mb-1 text-sm">Peso en kg</div>
+                  <input
+                    className="w-full rounded-lg border p-2"
+                    type="number"
+                    value={cantidadEspecifico}
+                    onChange={(e) => setCantidadEspecifico(e.target.value)}
+                  />
+                </label>
+              )}
+
+              {presetEspecifico === "calzado_courier" && (
+                <label>
+                  <div className="mb-1 text-sm">Número de pares</div>
+                  <input
+                    className="w-full rounded-lg border p-2"
+                    type="number"
+                    value={cantidadEspecifico}
+                    onChange={(e) => setCantidadEspecifico(e.target.value)}
+                  />
+                </label>
+              )}
+            </div>
+
+            <div className="grid gap-3 content-start">
+              <div className="rounded-xl border bg-gray-50 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Unidad física usada</span>
+                  <strong>{r.unidadEspecificoCalc}</strong>
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-gray-50 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Cantidad aplicada</span>
+                  <strong>{r.cantidadEspecificoCalc}</strong>
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-gray-50 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Tasa específica aplicada</span>
+                  <strong>{money(r.tasaEspecificoCalc)}</strong>
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-gray-50 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Arancel específico total</span>
+                  <strong>{money(r.vEspecifico)}</strong>
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-yellow-50 p-3 text-sm text-gray-700">
+                <strong>Nota:</strong> {r.notaEspecifico || "Modo manual: ingresa tu propia UF y tasa."}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl bg-white p-4 shadow">
           <h2 className="mb-4 text-xl font-semibold">Resultado</h2>
           <div className="space-y-3">
             <div className="rounded-xl bg-black p-4 text-white">
@@ -322,7 +546,8 @@ export default function Page() {
               <div className="flex justify-between rounded-lg border p-3"><span>Valor mercancía</span><strong>{money(r.mercaderia)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>FOB</span><strong>{money(r.fob)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>CIF</span><strong>{money(r.cif)}</strong></div>
-              <div className="flex justify-between rounded-lg border p-3"><span>Arancel</span><strong>{money(r.vArancel)}</strong></div>
+              <div className="flex justify-between rounded-lg border p-3"><span>Arancel ad-valorem</span><strong>{money(r.vArancel)}</strong></div>
+              <div className="flex justify-between rounded-lg border p-3"><span>Arancel específico</span><strong>{money(r.vEspecifico)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>FODINFA</span><strong>{money(r.vFodinfa)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>ICE</span><strong>{money(r.vIce)}</strong></div>
               <div className="flex justify-between rounded-lg border p-3"><span>IVA</span><strong>{money(r.vIva)}</strong></div>
