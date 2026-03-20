@@ -23,20 +23,20 @@ type PresetEspecifico =
 type Incoterm = "EXW" | "FCA" | "FOB" | "CFR" | "CIF" | "DAP" | "DPU";
 
 export default function Page() {
-  const [producto, setProducto] = useState("Laptop 14 pulgadas");
+  const [producto, setProducto] = useState("");
   const [incoterm, setIncoterm] = useState<Incoterm>("FOB");
-  const [unidades, setUnidades] = useState("100");
-  const [costoUnitario, setCostoUnitario] = useState("250");
+  const [unidades, setUnidades] = useState("");
+  const [costoUnitario, setCostoUnitario] = useState("");
 
   const [gastosOrigen, setGastosOrigen] = useState("0");
-  const [flete, setFlete] = useState("1200");
+  const [flete, setFlete] = useState("2000");
   const [seguro, setSeguro] = useState("120");
 
   const [gastosDestino, setGastosDestino] = useState("350");
   const [agenteAduana, setAgenteAduana] = useState("250");
   const [otros, setOtros] = useState("0");
 
-  const [arancel, setArancel] = useState("10");
+  const [arancel, setArancel] = useState("0");
   const [fodinfa, setFodinfa] = useState("0.5");
   const [iva, setIva] = useState("15");
   const [ice, setIce] = useState("0");
@@ -52,9 +52,10 @@ export default function Page() {
   const [unidadEspecifico, setUnidadEspecifico] = useState("u");
   const [tasaEspecificoUsd, setTasaEspecificoUsd] = useState("0");
   const [cantidadEspecifico, setCantidadEspecifico] = useState("0");
-  const [pulgadas, setPulgadas] = useState("24");
+  const [pulgadas, setPulgadas] = useState("55");
 
   const [arancelesDB, setArancelesDB] = useState<any[]>([]);
+  const [arancelesCurados, setArancelesCurados] = useState<any[]>([]);
   const [hsCode, setHsCode] = useState("");
 
   const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
@@ -65,15 +66,22 @@ export default function Page() {
 
   useEffect(() => {
     fetch("https://raw.githubusercontent.com/jfuroiani/landed-cost-aranceles-db/main/data/aranceles.json")
-    .then(res => res.json())
-    .then(data => setArancelesDB(data))
-    .catch(err => console.error("Error cargando aranceles:", err));
+      .then((res) => res.json())
+      .then((data) => setArancelesDB(data))
+      .catch((err) => console.error("Error cargando aranceles base:", err));
+
+    fetch("https://raw.githubusercontent.com/jfuroiani/landed-cost-aranceles-db/main/data/aranceles_curados.json")
+      .then((res) => res.json())
+      .then((data) => setArancelesCurados(data))
+      .catch((err) => console.error("Error cargando aranceles curados:", err));
   }, []);
 
-  useEffect(() => {
-    if (!hsCode) return;
+  const baseArancelaria = [...arancelesCurados, ...arancelesDB];
 
-    const item = arancelesDB.find(x => x.hs === hsCode);
+  useEffect(() => {
+  if (!hsCode) return;
+
+    const item = baseArancelaria.find((x) => x.hs === hsCode);
 
     if (!item) return;
 
@@ -82,18 +90,18 @@ export default function Page() {
     setIva(item.iva?.toString() || "15");
     setIce(item.ice?.toString() || "0");
 
-    if (item.tipo === "especifico") {
+    if (item.tipo === "especifico" && item.especifico) {
       setAplicaEspecifico(true);
-      setUnidadEspecifico(item.especifico.unidad);
-      setTasaEspecificoUsd(item.especifico.usd.toString());
+      setPresetEspecifico("manual");
+      setUnidadEspecifico(item.especifico.unidad || "u");
+      setTasaEspecificoUsd(item.especifico.usd?.toString() || "0");
     }
 
     if (item.tipo === "mixto") {
       setAplicaEspecifico(true);
       setPresetEspecifico("monitor_tv");
     }
-
-  }, [hsCode, arancelesDB]);
+  }, [hsCode, baseArancelaria]);
 
   const seleccionarPartida = (item: any) => {
     setHsCode(item.hs);
@@ -164,15 +172,25 @@ export default function Page() {
 
     const texto = hsCode.toLowerCase();
 
-    const resultados = arancelesDB.filter((item) =>
-      item.hs.includes(texto) ||
-      item.descripcion.toLowerCase().includes(texto)
-    );
+    const resultados = baseArancelaria.filter((item) => {
+      const descripcion = item.descripcion?.toLowerCase() || "";
+      const hsFormato = item.hs_formato?.toLowerCase() || "";
+      const aliases = Array.isArray(item.aliases)
+        ? item.aliases.map((a: string) => a.toLowerCase())
+        : [];
+
+      return (
+        item.hs.includes(texto) ||
+        hsFormato.includes(texto) ||
+        descripcion.includes(texto) ||
+        aliases.some((a: string) => a.includes(texto))
+      );
+    });
 
     setResultadosBusqueda(resultados.slice(0, 5));
     setIndiceSeleccionado(-1);
 
-    const exacto = arancelesDB.find((x) => x.hs === hsCode);
+    const exacto = baseArancelaria.find((x) => x.hs === hsCode);
 
     if (exacto) {
       setHsValido(true);
@@ -181,7 +199,7 @@ export default function Page() {
       setHsValido(false);
       setDescripcionHS("");
     }
-  }, [hsCode, arancelesDB]);
+  }, [hsCode, baseArancelaria]);
 
   const mostrarGastosOrigen = incoterm === "EXW";
   const mostrarFlete =
@@ -433,7 +451,7 @@ export default function Page() {
                         }`}
                         onMouseDown={() => seleccionarPartida(item)}
                       >
-                        <div className="font-medium">{item.hs}</div>
+                        <div className="font-medium">{item.hs_formato || item.hs}</div>
                         <div className="text-xs text-gray-500">
                           {item.descripcion}
                         </div>
