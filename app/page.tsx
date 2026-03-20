@@ -60,6 +60,8 @@ export default function Page() {
   const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
   const [hsValido, setHsValido] = useState(true);
   const [descripcionHS, setDescripcionHS] = useState("");
+  const [indiceSeleccionado, setIndiceSeleccionado] = useState(-1);
+  const [mostrarDropdownHS, setMostrarDropdownHS] = useState(false);
 
   useEffect(() => {
   fetch("https://raw.githubusercontent.com/jfuroiani/landed-cost-aranceles-db/main/aranceles.json")
@@ -93,24 +95,84 @@ export default function Page() {
 
   }, [hsCode, arancelesDB]);
 
+  const seleccionarPartida = (item: any) => {
+    setHsCode(item.hs);
+    setDescripcionHS(item.descripcion);
+    setResultadosBusqueda([]);
+    setHsValido(true);
+    setIndiceSeleccionado(-1);
+    setMostrarDropdownHS(false);
+
+    setArancel(item.advalorem?.toString() || "0");
+    setFodinfa(item.fodinfa?.toString() || "0.5");
+    setIva(item.iva?.toString() || "15");
+    setIce(item.ice?.toString() || "0");
+
+    if (item.tipo === "especifico") {
+      setAplicaEspecifico(true);
+      setPresetEspecifico("manual");
+      setUnidadEspecifico(item.especifico.unidad);
+      setTasaEspecificoUsd(item.especifico.usd.toString());
+    }
+
+    if (item.tipo === "mixto") {
+      setAplicaEspecifico(true);
+      setPresetEspecifico("monitor_tv");
+    }
+  };
+
+  const manejarTecladoHS = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!resultadosBusqueda.length) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setIndiceSeleccionado((prev) =>
+        prev < resultadosBusqueda.length - 1 ? prev + 1 : 0
+      );
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setIndiceSeleccionado((prev) =>
+        prev > 0 ? prev - 1 : resultadosBusqueda.length - 1
+      );
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (indiceSeleccionado >= 0 && resultadosBusqueda[indiceSeleccionado]) {
+        seleccionarPartida(resultadosBusqueda[indiceSeleccionado]);
+      }
+    }
+
+    if (e.key === "Escape") {
+      setResultadosBusqueda([]);
+      setIndiceSeleccionado(-1);
+      setMostrarDropdownHS(false);
+    }
+  };
+
   useEffect(() => {
     if (!hsCode) {
       setResultadosBusqueda([]);
       setDescripcionHS("");
       setHsValido(true);
+      setIndiceSeleccionado(-1);
+      setMostrarDropdownHS(false);
       return;
     }
 
     const texto = hsCode.toLowerCase();
 
-    const resultados = arancelesDB.filter(item =>
+    const resultados = arancelesDB.filter((item) =>
       item.hs.includes(texto) ||
       item.descripcion.toLowerCase().includes(texto)
     );
 
     setResultadosBusqueda(resultados.slice(0, 5));
+    setIndiceSeleccionado(-1);
 
-    const exacto = arancelesDB.find(x => x.hs === hsCode);
+    const exacto = arancelesDB.find((x) => x.hs === hsCode);
 
     if (exacto) {
       setHsValido(true);
@@ -119,7 +181,6 @@ export default function Page() {
       setHsValido(false);
       setDescripcionHS("");
     }
-
   }, [hsCode, arancelesDB]);
 
   const mostrarGastosOrigen = incoterm === "EXW";
@@ -354,22 +415,23 @@ export default function Page() {
                   }`}
                   placeholder="Buscar por código o producto (ej: TV, camiseta...)"
                   value={hsCode}
-                  onChange={(e) => setHsCode(e.target.value)}
+                  onChange={(e) => {
+                    setHsCode(e.target.value);
+                    setMostrarDropdownHS(true);
+                  }}
+                  onKeyDown={manejarTecladoHS}
                 />
 
                 {/* Dropdown */}
-                {resultadosBusqueda.length > 0 && (
+                {mostrarDropdownHS && resultadosBusqueda.length > 0 && (
                   <div className="absolute z-10 mt-1 w-full rounded-lg border bg-white shadow">
                     {resultadosBusqueda.map((item, i) => (
                       <div
                         key={i}
                         className="cursor-pointer p-2 hover:bg-gray-100"
-                        onClick={() => {
-                          setHsCode(item.hs);
-                          setDescripcionHS(item.descripcion);
-                          setResultadosBusqueda([]);
-                          setHsValido(true);
-                        }}
+                        className={`cursor-pointer p-2 ${
+                          i === indiceSeleccionado ? "bg-gray-100" : "hover:bg-gray-100"
+                        }`}
                       >
                         <div className="font-medium">{item.hs}</div>
                         <div className="text-xs text-gray-500">
