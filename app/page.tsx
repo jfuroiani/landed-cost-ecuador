@@ -64,7 +64,7 @@ export default function Page() {
   const [mostrarDropdownHS, setMostrarDropdownHS] = useState(false);
 
   useEffect(() => {
-  fetch("https://raw.githubusercontent.com/jfuroiani/landed-cost-aranceles-db/main/aranceles.json")
+    fetch("https://raw.githubusercontent.com/jfuroiani/landed-cost-aranceles-db/main/data/aranceles.json")
     .then(res => res.json())
     .then(data => setArancelesDB(data))
     .catch(err => console.error("Error cargando aranceles:", err));
@@ -428,10 +428,10 @@ export default function Page() {
                     {resultadosBusqueda.map((item, i) => (
                       <div
                         key={i}
-                        className="cursor-pointer p-2 hover:bg-gray-100"
                         className={`cursor-pointer p-2 ${
                           i === indiceSeleccionado ? "bg-gray-100" : "hover:bg-gray-100"
                         }`}
+                        onMouseDown={() => seleccionarPartida(item)}
                       >
                         <div className="font-medium">{item.hs}</div>
                         <div className="text-xs text-gray-500">
