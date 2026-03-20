@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 
 const money = (n: number) =>
   new Intl.NumberFormat("es-EC", {
@@ -76,7 +76,10 @@ export default function Page() {
       .catch((err) => console.error("Error cargando aranceles curados:", err));
   }, []);
 
-  const baseArancelaria = [...arancelesCurados, ...arancelesDB];
+  const baseArancelaria = useMemo(
+    () => [...arancelesCurados, ...arancelesDB],
+    [arancelesCurados, arancelesDB]
+  );
 
   useEffect(() => {
   if (!hsCode) return;
@@ -129,7 +132,7 @@ export default function Page() {
     }
   };
 
-  const manejarTecladoHS = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const manejarTecladoHS = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!resultadosBusqueda.length) return;
 
     if (e.key === "ArrowDown") {
