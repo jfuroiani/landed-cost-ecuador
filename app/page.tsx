@@ -409,7 +409,7 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-gray-50 p-4 text-gray-900">
       <div className="mx-auto max-w-6xl space-y-6">
-        <h1 className="text-3xl font-bold">Calculadora Landed Cost Ecuador</h1>
+        <h1 className="text-3xl font-bold">Calculadora Costo Landed Ecuador</h1>
         <p className="text-sm text-gray-600">
           Lógica por Incoterm, ISD configurable y arancel específico.
         </p>
